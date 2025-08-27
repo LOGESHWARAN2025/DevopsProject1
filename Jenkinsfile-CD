@@ -1,49 +1,49 @@
 // JENKINS CD PIPELINE
-// Here the image stored in Dockerhub will be deployed using K8s
-// IMP NOTE: Store your EC2 instance username & key in Jenkins credentials
+// Purpose: Deploy Dockerhub image to Kubernetes using Jenkins
+// NOTE: Store your EC2 instance username & key in Jenkins credentials (ID = "my_ec2_creds")
 
 pipeline {
     agent any
+
     // DECLARE THE VARIABLES HERE:
     environment {
-    NODE_IP = '<Node_Server_Private_IP>'   // paste your Node-Server private IP here
-    EC2_NAME = "ec2-user"                  // enter your AWS EC2 username
-    PIPELINE_NAME = "CI-PIPELINE"          // enter your pipeline name here 
-    PROJECT_NAME = "DevopsProject1"        // enter your Devops project name here
+        NODE_IP = "172.31.35.221"           // Replace with your Node-Server private IP
+        EC2_NAME = "ec2-user"               // AWS EC2 username (default for Amazon Linux)
+        PIPELINE_NAME = "CI-PIPELINE"       // Name of your Jenkins CI pipeline job
+        PROJECT_NAME = "DevopsProject1"     // Project directory name
     }
 
     stages {
+
         stage("1. Pull Files") {
-            // Copy K8s manifest files from Master-Server workspace to Node-server
             steps {
-              sshagent(['my_ec2_creds']) {         // install 'ssh agent' plugin & generate 'ssh-agent' pipeline syntax generator 
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP}"   // enter your Node Server's private IP here
-                sh "scp /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
-                sh "scp /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
-              }
+                sshagent(['my_ec2_creds']) {
+                    // Copy Kubernetes manifests from Jenkins to Node server
+                    sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
+                    sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
+                }
             }
         }
 
         stage('2. Approval') {
-          // If 'manual approval' is required, then it is called 'Continuous Delivery'
-          // If it is totally automated, then it is called 'Continuous Deployment'
             steps {
-                input message: 'Approve deployment?'
+                input message: 'Approve deployment to Kubernetes?'
             }
         }
 
         stage("3. Deployment") {
-          // K8s Deployment using Ansible
-            // i. Ensure to establish passwordless connection between Master & Node first
-           // ii. Your deployment.yaml file must contain the Dockerhub image within the container block
             steps {
-              sshagent(['my_ec2_creds']) {          // store EC2 username & pem-key in Jenkins credentials
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP}"   // enter your Node-Server private IP here
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f deployment.yaml"
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f service.yaml"
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deploy"
-                sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get service"
-              }
+                sshagent(['my_ec2_creds']) {
+                    // Apply Kubernetes manifests on Node server
+                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml"
+                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/service.yaml"
+
+                    // Restart deployment to use the latest image
+                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deploy"
+
+                    // Verify service is created
+                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get service"
+                }
             }
         }
     }

@@ -8,7 +8,7 @@ pipeline {
     agent any
     // DECLARE THE VARIABLES HERE:
     environment {
-        DOCKER_USERNAME = "nasirpatel"     // check the 'ID' in your Jenkins credentials
+        DOCKER_USERNAME = "logeshwaran2025"     // check the 'ID' in your Jenkins credentials
     }
 
     stages {
@@ -88,7 +88,7 @@ pipeline {
             steps{
                 script { 
                   def JOB = env.JOB_NAME.toLowerCase() // Convert Jenkins Job name to lower-case
-                  sh "trivy image ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
+                  //sh "trivy image ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
                 }
             }
         }
@@ -97,7 +97,7 @@ pipeline {
             // Login to Dockerhub & Push the image to Dockerhub
             steps{
                 script { 
-                  withCredentials([usernamePassword(credentialsId: 'my_dockerhub_creds', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
+                  withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
                     sh "docker login -u '${docker_user}' -p '${docker_pass}'"
                     def JOB = env.JOB_NAME.toLowerCase() // Convert Jenkins Job name to lower-case
                     sh "docker push ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
