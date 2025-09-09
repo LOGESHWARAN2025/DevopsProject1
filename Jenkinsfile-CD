@@ -1,12 +1,12 @@
-// Jenkinsfile-CD (function-style for master pipeline)
+// Jenkinsfile-CD (function-style)
 def runCD() {
-    environment {
-        NODE_IP = "172.31.35.221"
-        EC2_NAME = "ec2-user"
-        PIPELINE_NAME = "CI-PIPELINE"
-        PROJECT_NAME = "DevopsProject1"
-    }
+    // Variables
+    def NODE_IP = "13.233.21.199"          // EC2 public IP
+    def EC2_NAME = "ec2-user"
+    def PIPELINE_NAME = "CI-CD-Pipeline"   // Name of your master pipeline job
+    def PROJECT_NAME = "DevopsProject1"
 
+    // Stage 1: Copy Kubernetes manifests
     stage("1. Pull Files") {
         sshagent(['my_ec2_creds']) {
             sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
@@ -14,10 +14,12 @@ def runCD() {
         }
     }
 
+    // Stage 2: Manual approval
     stage('2. Approval') {
         input message: 'Approve deployment to Kubernetes?'
     }
 
+    // Stage 3: Deploy to Kubernetes
     stage("3. Deployment") {
         sshagent(['my_ec2_creds']) {
             sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml"
