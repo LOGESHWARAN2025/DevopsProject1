@@ -1,15 +1,15 @@
 // Jenkinsfile-CI (function-style for master pipeline)
 def runCI() {
-    environment {
-        DOCKER_USERNAME = "logeshwaran2025"
-    }
+
+    // Set DockerHub username (constant)
+    env.DOCKER_USERNAME = "logeshwaran2025"
 
     stage("1. Cleanup") {
         deleteDir()
     }
 
     stage('2. Git Checkout') {
-        dir ("DevopsProject1"){
+        dir("DevopsProject1") {
             script {
                 git branch: 'main', url: 'https://github.com/LOGESHWARAN2025/DevopsProject1.git'
             }
@@ -17,19 +17,19 @@ def runCI() {
     }
 
     stage("3. Maven Unit Test") {
-        dir ("DevopsProject1") {
+        dir("DevopsProject1") {
             sh 'mvn test'
         }
     }
 
     stage('4. Maven Build') {
-        dir ("DevopsProject1") {
+        dir("DevopsProject1") {
             sh 'mvn clean install'
         }
     }
 
     stage("5. Maven Integration Test") {
-        dir ("DevopsProject1") {
+        dir("DevopsProject1") {
             sh 'mvn verify'
         }
     }
@@ -44,29 +44,31 @@ def runCI() {
     }
 
     stage('7. Docker Image Tag') {
-        dir('DevopsProject1') {
-            script {
-                def JOB = env.JOB_NAME.toLowerCase()
-                sh "docker tag ${JOB}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
-                sh "docker tag ${JOB}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${JOB}:latest"
-            }
+        script {
+            def JOB = env.JOB_NAME.toLowerCase()
+            sh "docker tag ${JOB}:${BUILD_NUMBER} ${env.DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
+            sh "docker tag ${JOB}:${BUILD_NUMBER} ${env.DOCKER_USERNAME}/${JOB}:latest"
         }
     }
 
     stage('8. Trivy Image Scan') {
         script {
             def JOB = env.JOB_NAME.toLowerCase()
-            // sh "trivy image ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
+            // Example scan (uncomment when Trivy is installed)
+            // sh "trivy image ${env.DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
         }
     }
 
     stage('9. Docker Image Push') {
         script {
-            withCredentials([usernamePassword(credentialsId: 'docker-credentials', usernameVariable: 'docker_user', passwordVariable: 'docker_pass')]) {
-                sh "docker login -u '${docker_user}' -p '${docker_pass}'"
-                def JOB = env.JOB_NAME.toLowerCase()
-                sh "docker push ${DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
-                sh "docker push ${DOCKER_USERNAME}/${JOB}:latest"
+            withCredentials([usernamePassword(credentialsId: 'docker-credentials',
+                                             usernameVariable: 'DOCKER_USER',
+                                             passwordVariable: 'DOCKER_PASS')]) {
+                sh """
+                  echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                  docker push ${env.DOCKER_USERNAME}/${env.JOB_NAME.toLowerCase()}:v${BUILD_NUMBER}
+                  docker push ${env.DOCKER_USERNAME}/${env.JOB_NAME.toLowerCase()}:latest
+                """
             }
         }
     }
