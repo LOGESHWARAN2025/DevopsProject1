@@ -1,31 +1,36 @@
-// Jenkinsfile-CD (function-style)
+// Jenkinsfile-CD (function-style, used inside main Jenkinsfile)
 def runCD() {
-    // Variables
-    def NODE_IP = "13.233.21.199"          // EC2 public IP
-    def EC2_NAME = "ec2-user"
-    def PIPELINE_NAME = "CI-CD-Pipeline"   // Name of your master pipeline job
-    def PROJECT_NAME = "DevopsProject1"
+    def NODE_IP       = "13.233.21.199"     // Your EC2 public IP
+    def EC2_NAME      = "ec2-user"          // Default Amazon Linux user
+    def PIPELINE_NAME = "CI-CD-Pipeline"    // Jenkins job name
+    def PROJECT_NAME  = "DevopsProject1"    // Your repo/project folder
 
-    // Stage 1: Copy Kubernetes manifests
-    stage("1. Pull Files") {
+    stage("1. Copy Kubernetes Files to EC2") {
         sshagent(['my_ec2_creds']) {
-            sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
-            sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
+            sh """
+                scp -o StrictHostKeyChecking=no \
+                    /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml \
+                    ${EC2_NAME}@${NODE_IP}:/home/ec2-user/
+
+                scp -o StrictHostKeyChecking=no \
+                    /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml \
+                    ${EC2_NAME}@${NODE_IP}:/home/ec2-user/
+            """
         }
     }
 
-    // Stage 2: Manual approval
-    stage('2. Approval') {
-        input message: 'Approve deployment to Kubernetes?'
+    stage("2. Manual Approval") {
+        input message: "Approve deployment to Kubernetes?"
     }
 
-    // Stage 3: Deploy to Kubernetes
-    stage("3. Deployment") {
+    stage("3. Deploy to Kubernetes") {
         sshagent(['my_ec2_creds']) {
-            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml"
-            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/service.yaml"
-            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deploy"
-            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get service"
+            sh """
+                ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml
+                ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/service.yaml
+                ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deployment mydeploy
+                ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get svc
+            """
         }
     }
 }

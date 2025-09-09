@@ -1,13 +1,16 @@
 pipeline {
     agent any
+
     environment {
-        // Set JAVA_HOME to the Corretto 17 JDK on your EC2 agent
+        // Set JAVA_HOME to Corretto 17 JDK on your EC2 agent
         JAVA_HOME = '/usr/lib/jvm/java-17-amazon-corretto.x86_64'
-        PATH = "${env.JAVA_HOME}/bin:${env.PATH}"
+        PATH = "${JAVA_HOME}/bin:${PATH}"
     }
+
     tools {
-        maven 'Maven3'  // Jenkins Maven tool name
+        maven 'Maven3'  // Must match the Maven name in Jenkins global tools
     }
+
     stages {
         stage('Run CI') {
             steps {
@@ -17,6 +20,7 @@ pipeline {
                 }
             }
         }
+
         stage('Run CD') {
             steps {
                 script {
