@@ -1,50 +1,31 @@
-// JENKINS CD PIPELINE
-// Purpose: Deploy Dockerhub image to Kubernetes using Jenkins
-// NOTE: Store your EC2 instance username & key in Jenkins credentials (ID = "my_ec2_creds")
-
-pipeline {
-    agent any
-
-    // DECLARE THE VARIABLES HERE:
+// Jenkinsfile-CD (function-style for master pipeline)
+def runCD() {
     environment {
-        NODE_IP = "172.31.35.221"           // Replace with your Node-Server private IP
-        EC2_NAME = "ec2-user"               // AWS EC2 username (default for Amazon Linux)
-        PIPELINE_NAME = "CI-PIPELINE"       // Name of your Jenkins CI pipeline job
-        PROJECT_NAME = "DevopsProject1"     // Project directory name
+        NODE_IP = "172.31.35.221"
+        EC2_NAME = "ec2-user"
+        PIPELINE_NAME = "CI-PIPELINE"
+        PROJECT_NAME = "DevopsProject1"
     }
 
-    stages {
-
-        stage("1. Pull Files") {
-            steps {
-                sshagent(['my_ec2_creds']) {
-                    // Copy Kubernetes manifests from Jenkins to Node server
-                    sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
-                    sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
-                }
-            }
+    stage("1. Pull Files") {
+        sshagent(['my_ec2_creds']) {
+            sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
+            sh "scp -o StrictHostKeyChecking=no /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml ${EC2_NAME}@${NODE_IP}:/home/ec2-user/"
         }
+    }
 
-        stage('2. Approval') {
-            steps {
-                input message: 'Approve deployment to Kubernetes?'
-            }
-        }
+    stage('2. Approval') {
+        input message: 'Approve deployment to Kubernetes?'
+    }
 
-        stage("3. Deployment") {
-            steps {
-                sshagent(['my_ec2_creds']) {
-                    // Apply Kubernetes manifests on Node server
-                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml"
-                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/service.yaml"
-
-                    // Restart deployment to use the latest image
-                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deploy"
-
-                    // Verify service is created
-                    sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get service"
-                }
-            }
+    stage("3. Deployment") {
+        sshagent(['my_ec2_creds']) {
+            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/deployment.yaml"
+            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl apply -f /home/ec2-user/service.yaml"
+            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl rollout restart deploy"
+            sh "ssh -o StrictHostKeyChecking=no ${EC2_NAME}@${NODE_IP} kubectl get service"
         }
     }
 }
+
+return this
