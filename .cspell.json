@@ -1,0 +1,12 @@
+{
+  "words": [
+    "javatechie",
+    "springframework",
+    "devops"
+  ],
+  "ignorePaths": [
+    "target/**",
+    "*.jar",
+    "*.class"
+  ]
+}
