@@ -6,15 +6,15 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: mypod
+      app: mydeploy1
   template:
     metadata:
       labels:
-        app: mypod
+        app: mydeploy1
     spec:
       containers:
         - name: mycontainer
-          image: logeshwaran2025/ci-cd-pipelines:latest  # <-- corrected Docker Hub repo
+          image: logeshwaran2025/ci-cd-pipelines:latest
           ports:
             - containerPort: 8080
           resources:
