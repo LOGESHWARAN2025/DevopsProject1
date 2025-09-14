@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: mycontainer
-          image: logeshwaran/Dockerhub:latest
+          image: logeshwaran2025/ci-cd-pipelines:latest  # <-- corrected Docker Hub repo
           ports:
             - containerPort: 8080
           resources:
