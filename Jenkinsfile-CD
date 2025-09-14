@@ -2,7 +2,7 @@
 def runCD() {
     def NODE_IP       = "13.233.21.199"     // Your EC2 public IP
     def EC2_USER      = "ec2-user"          // Default Amazon Linux user
-    def PIPELINE_NAME = "CI-CD-Pipeline"    // Jenkins job name
+    def PIPELINE_NAME = "CI-CD-Pipelines"    // Jenkins job name
     def PROJECT_NAME  = "DevopsProject1"    // Your repo/project folder
 
     stage("1. Copy Kubernetes Files to EC2") {
