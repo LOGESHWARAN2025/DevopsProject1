@@ -1,8 +1,9 @@
 // Jenkinsfile-CI (function-style for master pipeline)
 def runCI() {
 
-    // Set DockerHub username (constant)
+    // DockerHub username & repository
     env.DOCKER_USERNAME = "logeshwaran2025"
+    def DOCKER_REPO = "ci-cd-pipelines"
 
     stage("1. Cleanup") {
         deleteDir()
@@ -36,47 +37,38 @@ def runCI() {
 
     stage('6. Docker Image Build') {
         dir('DevopsProject1') {
-            script {
-                def JOB = env.JOB_NAME.toLowerCase()
-                sh "docker build -t ${JOB}:${BUILD_NUMBER} ."
-            }
+            sh "docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} ."
         }
     }
 
     stage('7. Docker Image Tag') {
-        script {
-            def JOB = env.JOB_NAME.toLowerCase()
-            sh "docker tag ${JOB}:${BUILD_NUMBER} ${env.DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER}"
-            sh "docker tag ${JOB}:${BUILD_NUMBER} ${env.DOCKER_USERNAME}/${JOB}:latest"
-        }
+        sh """
+            docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${DOCKER_REPO}:v${BUILD_NUMBER}
+            docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_USERNAME}/${DOCKER_REPO}:latest
+        """
     }
 
     stage('8. Trivy Image Scan') {
-        script {
-            def JOB = env.JOB_NAME.toLowerCase()
-            // Example scan (uncomment when Trivy is installed)
-            // sh "trivy image ${env.DOCKER_USERNAME}/${JOB}:v${BUILD_NUMBER} > scan.txt"
-        }
+        // Optional Trivy scan
+        sh """
+            # trivy image ${DOCKER_USERNAME}/${DOCKER_REPO}:v${BUILD_NUMBER} > scan.txt || true
+        """
     }
 
     stage('9. Docker Image Push') {
-        script {
-            withCredentials([usernamePassword(credentialsId: 'docker-credentials',
-                                             usernameVariable: 'DOCKER_USER',
-                                             passwordVariable: 'DOCKER_PASS')]) {
-                sh """
-                  echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                  docker push ${env.DOCKER_USERNAME}/${env.JOB_NAME.toLowerCase()}:v${BUILD_NUMBER}
-                  docker push ${env.DOCKER_USERNAME}/${env.JOB_NAME.toLowerCase()}:latest
-                """
-            }
+        withCredentials([usernamePassword(credentialsId: 'docker-credentials',
+                                         usernameVariable: 'DOCKER_USER',
+                                         passwordVariable: 'DOCKER_PASS')]) {
+            sh """
+                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:v${BUILD_NUMBER}
+                docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:latest
+            """
         }
     }
 
     stage('10. Docker Image Cleanup') {
-        script {
-            sh "docker image prune -af"
-        }
+        sh "docker image prune -af"
     }
 }
 
