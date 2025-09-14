@@ -6,16 +6,16 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: mydeploy1
+      app: mypod
   template:
     metadata:
       labels:
-        app: mydeploy1
+        app: mypod
     spec:
       containers:
         - name: mycontainer
           image: logeshwaran2025/ci-cd-pipelines:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8090
       imagePullSecrets:
         - name: regcred
