@@ -35,9 +35,17 @@ def runCI() {
         }
     }
 
-    stage('6. Docker Image Build') {
+    // ✅ Docker login before building to avoid 401 Unauthorized
+    stage('6. Docker Login & Image Build') {
         dir('DevopsProject1') {
-            sh "docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} ."
+            withCredentials([usernamePassword(credentialsId: 'docker-credentials',
+                                             usernameVariable: 'DOCKER_USER',
+                                             passwordVariable: 'DOCKER_PASS')]) {
+                sh """
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} .
+                """
+            }
         }
     }
 
@@ -56,15 +64,11 @@ def runCI() {
     }
 
     stage('9. Docker Image Push') {
-        withCredentials([usernamePassword(credentialsId: 'docker-credentials',
-                                         usernameVariable: 'DOCKER_USER',
-                                         passwordVariable: 'DOCKER_PASS')]) {
-            sh """
-                echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:v${BUILD_NUMBER}
-                docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:latest
-            """
-        }
+        // Already logged in at stage 6, so push will work
+        sh """
+            docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:v${BUILD_NUMBER}
+            docker push ${DOCKER_USERNAME}/${DOCKER_REPO}:latest
+        """
     }
 
     stage('10. Docker Image Cleanup') {
