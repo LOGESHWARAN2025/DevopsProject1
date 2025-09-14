@@ -1,19 +1,20 @@
-// Jenkinsfile-CD (function-style, used inside main Jenkinsfile)
+// Jenkinsfile-CD (function-style, fixed)
 def runCD() {
     def NODE_IP       = "13.233.21.199"     // Your EC2 public IP
     def EC2_USER      = "ec2-user"          // Default Amazon Linux user
-    def PIPELINE_NAME = "CI-CD-Pipelines"    // Jenkins job name
     def PROJECT_NAME  = "DevopsProject1"    // Your repo/project folder
 
     stage("1. Copy Kubernetes Files to EC2") {
         sshagent(['my_ec2_creds']) {   // Jenkins credentials ID (private key)
             sh """
+                # Copy deployment.yaml
                 scp -o StrictHostKeyChecking=no \
-                    /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/deployment.yaml \
+                    ${WORKSPACE}/${PROJECT_NAME}/deployment.yaml \
                     ${EC2_USER}@${NODE_IP}:/home/${EC2_USER}/
 
+                # Copy service.yaml
                 scp -o StrictHostKeyChecking=no \
-                    /var/lib/jenkins/workspace/${PIPELINE_NAME}/${PROJECT_NAME}/service.yaml \
+                    ${WORKSPACE}/${PROJECT_NAME}/service.yaml \
                     ${EC2_USER}@${NODE_IP}:/home/${EC2_USER}/
             """
         }
@@ -26,9 +27,14 @@ def runCD() {
     stage("3. Deploy to Kubernetes") {
         sshagent(['my_ec2_creds']) {
             sh """
+                # Apply deployment and service
                 ssh -o StrictHostKeyChecking=no ${EC2_USER}@${NODE_IP} kubectl apply -f /home/${EC2_USER}/deployment.yaml
                 ssh -o StrictHostKeyChecking=no ${EC2_USER}@${NODE_IP} kubectl apply -f /home/${EC2_USER}/service.yaml
+
+                # Restart deployment
                 ssh -o StrictHostKeyChecking=no ${EC2_USER}@${NODE_IP} kubectl rollout restart deployment mydeploy
+
+                # Show service info
                 ssh -o StrictHostKeyChecking=no ${EC2_USER}@${NODE_IP} kubectl get svc -o wide
             """
         }
